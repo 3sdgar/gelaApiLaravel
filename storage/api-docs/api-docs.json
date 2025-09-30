@@ -1,8 +1,8 @@
 {
     "openapi": "3.0.0",
     "info": {
-        "title": "API de Artículos",
-        "description": "API para la gestión de artículos",
+        "title": "API de Curriculums",
+        "description": "API para la gestión de curriculums",
         "version": "1.0.0"
     },
     "servers": [

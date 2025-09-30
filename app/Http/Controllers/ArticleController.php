@@ -7,13 +7,13 @@ use Illuminate\Http\Request;
 
 /**
  * @OA\Info(
- * title="API de Artículos",
+ * title="API de Curriculums",
  * version="1.0.0",
- * description="API para la gestión de artículos"
+ * description="API para la gestión de Curriculums"
  * )
  * @OA\Tag(
  * name="Artículos",
- * description="Endpoints para la gestión de artículos"
+ * description="Endpoints para la gestión de Curriculums"
  * )
  */
 class ArticleController extends Controller

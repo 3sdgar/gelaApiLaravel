@@ -1,7 +1,7 @@
 # Imagen base liviana de PHP con FPM
 FROM php:8.2-fpm-alpine
 
-# Instala dependencias del sistema y herramientas de PostgreSQL
+# Instala dependencias del sistema, Nginx, git, y PostgreSQL
 RUN apk add --no-cache \
     nginx \
     curl \
@@ -9,8 +9,10 @@ RUN apk add --no-cache \
     unzip \
     libpq \
     postgresql-dev \
-    # Instala extensiones PHP para Laravel y PostgreSQL
-    && docker-php-ext-install pdo pdo_pgsql opcache
+    # Instala extensiones PHP necesarias
+    && docker-php-ext-install pdo pdo_pgsql opcache \
+    # Limpia el cache de APK
+    && rm -rf /var/cache/apk/*
 
 # Copia Composer desde la imagen oficial
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
@@ -24,14 +26,43 @@ COPY . .
 # Instala dependencias de Laravel (producción)
 RUN composer install --no-dev --optimize-autoloader
 
-# >>> PASO CRÍTICO: Limpiar la caché de configuración en la etapa de construcción
-# Esto evita que se usen credenciales antiguas si el archivo de caché está en Git.
+# >>> Limpiar la caché de configuración en la etapa de construcción
 RUN php artisan config:clear
 
 # Asigna permisos correctos para Laravel (storage y cache)
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
     && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-# Comando de inicio del contenedor (solo migraciones y arranque)
-# La limpieza ya se hizo arriba.
-CMD php artisan migrate --force && vendor/bin/heroku-php-apache2 public/
+# ----------------------------------------------------
+# CONFIGURACIÓN DEL SERVIDOR WEB (Nginx)
+# ----------------------------------------------------
+
+# Crea un archivo de configuración simple para Nginx
+RUN echo "server { \
+    listen 8080; \
+    root /var/www/html/public; \
+    index index.php index.html; \
+    location / { \
+        try_files \$uri \$uri/ /index.php?\$query_string; \
+    } \
+    location ~ \.php\$ { \
+        fastcgi_split_path_info ^(.+\.php)(/.+)\$; \
+        fastcgi_pass 127.0.0.1:9000; \
+        fastcgi_index index.php; \
+        include fastcgi_params; \
+        fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name; \
+        fastcgi_param PATH_INFO \$fastcgi_path_info; \
+    } \
+}" > /etc/nginx/conf.d/default.conf
+
+# El puerto 8080 es el que usa Render por defecto
+EXPOSE 8080
+
+# ----------------------------------------------------
+# COMANDO DE INICIO
+# ----------------------------------------------------
+
+# Inicia la migración de Laravel, luego inicia Nginx y FPM
+# El comando 'migrate --force' se usa solo la primera vez.
+# El servidor Nginx debe ejecutarse en primer plano, junto con PHP-FPM, para que Docker no se cierre.
+CMD php artisan migrate --force && nginx -g "daemon off;" & php-fpm -F

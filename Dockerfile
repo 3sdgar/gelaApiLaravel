@@ -24,8 +24,9 @@ RUN php artisan key:generate --ansi
 
 EXPOSE 10000
 
-# Usar servidor PHP interno que Render detecta como HTTP
+# Servidor PHP interno
 CMD ["php", "artisan", "serve", "--host", "0.0.0.0", "--port", "10000"]
+
 
 # ----------------------------
 # # Imagen base PHP-FPM ligera

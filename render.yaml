@@ -39,3 +39,11 @@ databases:
     plan: free
     databaseName: gela
     user: postgres
+
+jobs:
+  - type: cron
+    name: run-migrations
+    schedule: "ON_DEPLOY"
+    serviceName: laravel-app
+    env: docker
+    command: php artisan migrate --force

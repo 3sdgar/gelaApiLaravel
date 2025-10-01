@@ -1,6 +1,9 @@
+# ----------------------------
+# Imagen base PHP-FPM ligera
+# ----------------------------
 FROM php:8.2-fpm-alpine
 
-# Dependencias de sistema y PostgreSQL
+# Instala dependencias del sistema y PostgreSQL
 RUN apk add --no-cache \
     curl \
     git \
@@ -13,23 +16,24 @@ RUN apk add --no-cache \
 # Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
+# Directorio de trabajo
 WORKDIR /var/www/html
 
-# Proyecto
+# Copia el proyecto
 COPY . .
 
 # Dependencias Laravel
 RUN composer install --no-dev --optimize-autoloader
 
-# Limpia cache config
+# Limpia caché config
 RUN php artisan config:clear
 
 # Permisos
 RUN chown -R www-data:www-data storage bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
 
-# Puerto que Render expone
+# Puerto que Render expone automáticamente
 EXPOSE 10000
 
-# Solo PHP-FPM
-CMD php-fpm --nodaemonize --fpm-config /usr/local/etc/php-fpm.conf
+# Servidor PHP interno que Render detecta como HTTP
+CMD php -S 0.0.0.0:$PORT -t public

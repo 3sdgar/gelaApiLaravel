@@ -21,7 +21,6 @@ Route::post('/login', [AuthController::class, 'login']);
 //         return $request->user();
 //     });
 
-// Rutas de recursos de API (SON PÚBLICAS)
 Route::apiResource('articles', ArticleController::class);
 Route::apiResource('users', UserController::class);
 Route::apiResource('roles', RoleController::class);

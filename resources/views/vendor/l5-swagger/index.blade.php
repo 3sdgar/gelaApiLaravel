@@ -23,7 +23,7 @@
     /* --- Estilos para deshabilitar bloques --- */
     .disabled-opblock {
       opacity: 0.6;
-      pointer-events: none; 
+      pointer-events: none;
       user-select: none;
       position: relative;
     }
@@ -140,7 +140,7 @@ window.onload = function() {
     const urls = [];
 
     @foreach($urlsToDocs as $title => $url)
-        urls.push({name: "{{ $title }}", url: "{{ $url }}"});
+        urls.push({name: "{{ $title }}", url: "{{ url($url) }}"});
     @endforeach
 
     const ui = SwaggerUIBundle({
@@ -150,7 +150,17 @@ window.onload = function() {
         operationsSorter: {!! isset($operationsSorter) ? '"' . $operationsSorter . '"' : 'null' !!},
         configUrl: {!! isset($configUrl) ? '"' . $configUrl . '"' : 'null' !!},
         validatorUrl: {!! isset($validatorUrl) ? '"' . $validatorUrl . '"' : 'null' !!},
-        oauth2RedirectUrl: "{{ route('l5-swagger.'.$documentation.'.oauth2_callback', [], $useAbsolutePath) }}",
+
+        // ** CORRECCIÓN DEFINITIVA **
+        // Verificamos si la ruta nombrada existe antes de intentar llamarla.
+        // Si no existe, pasamos 'null' como valor, que es lo que espera Swagger UI si no se usa OAuth2.
+        oauth2RedirectUrl: 
+        @if (\Route::has('l5-swagger.'.$documentation.'.oauth2_callback'))
+            "{{ route('l5-swagger.'.$documentation.'.oauth2_callback', [], $useAbsolutePath) }}",
+        @else
+            null,
+        @endif
+        
         requestInterceptor: function(request) {
             request.headers['X-CSRF-TOKEN'] = '{{ csrf_token() }}';
             return request;

@@ -18,13 +18,13 @@ return [
             ],
             'paths' => [
                 'annotations' => [
-                    base_path('app'), // o la ruta a tus controladores
+                    base_path('app'),
                 ],
                 'docs' => storage_path('api-docs'),
                 'docs_json' => 'api-docs.json',
                 'docs_yaml' => 'api-docs.yaml',
                 'excludes' => [],
-                'base' => base_path(), // Esta es la línea que faltaba
+                'base' => env('L5_SWAGGER_BASE_PATH', 'http://127.0.0.1:8000'),
             ],
         ],
     ],

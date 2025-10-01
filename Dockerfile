@@ -1,10 +1,7 @@
-# ----------------------------
-# Imagen base PHP-FPM ligera
-# ----------------------------
 FROM php:8.2-fpm-alpine
 
-# Instala dependencias del sistema y PostgreSQL
 RUN apk add --no-cache \
+    nginx \
     curl \
     git \
     unzip \
@@ -13,27 +10,42 @@ RUN apk add --no-cache \
     && docker-php-ext-install pdo pdo_pgsql opcache \
     && rm -rf /var/cache/apk/*
 
-# Copia Composer desde la imagen oficial
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Directorio de trabajo
 WORKDIR /var/www/html
 
-# Copia los archivos del proyecto
 COPY . .
 
-# Instala dependencias de Laravel (producción)
 RUN composer install --no-dev --optimize-autoloader
 
-# Limpia caché de configuración
 RUN php artisan config:clear
 
-# Permisos correctos para storage y cache
-RUN chown -R www-data:www-data storage bootstrap/cache \
-    && chmod -R 775 storage bootstrap/cache
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
+    && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-# Puerto que Render expone
-EXPOSE 10000
+RUN sh -c "cat > /etc/nginx/conf.d/default.conf <<-EOF
+server {
+    listen 8080;
+    root /var/www/html/public;
+    index index.php index.html;
 
-# Arranca PHP-FPM
-CMD php-fpm --nodaemonize --fpm-config /usr/local/etc/php-fpm.conf
+    location / {
+        try_files \$uri \$uri/ /index.php?\$query_string;
+    }
+
+    location ~ \.php\$ {
+        fastcgi_split_path_info ^(.+\.php)(/.+)\$;
+        fastcgi_pass 127.0.0.1:9000;
+        fastcgi_index index.php;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
+        fastcgi_param PATH_INFO \$fastcgi_path_info;
+    }
+}
+EOF"
+
+EXPOSE 8080
+
+CMD php artisan migrate --force && \
+    /usr/sbin/php-fpm82 -F & \
+    nginx -g "daemon off;"
